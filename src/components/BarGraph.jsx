@@ -2,11 +2,10 @@
 import * as d3 from "d3";
 import { useRef, useState, useEffect } from "react";
 
-
 export async function getGraphData() {
-  const csvData = await d3.csv("/Alphabets.csv", (d) => ({
-    "letter": d.letter,
-    "frequency": parseInt(d.frequency),
+  const csvData = await d3.csv("/Alphabets.csv", (row) => ({
+    letter: row.letter,
+    frequency: parseInt(row.frequency),
   }));
   return csvData ?? [];
 }
@@ -14,67 +13,97 @@ export function BarGraph() {
   let [data, setData] = useState([]);
   const svgRef = useRef();
 
+  //makes sure that only one call is made to refresh the graph
   useEffect(() => {
     getGraphData().then((graphData) => {
-      setData(graphData)
+      setData(graphData);
     });
   }, []);
 
+  //we need to make this responsive.
   useEffect(() => {
     const width = 928;
     const height = 500;
-    const marginTop = 30;
+    const marginTop = 50;
     const marginRight = 0;
-    const marginBottom = 30;
+    const marginBottom = 50;
     const marginLeft = 40;
 
     // Declare the x (horizontal position) scale.
-    const x = d3.scaleBand()
-      .domain(d3.groupSort(data, ([d]) => -d.frequency, (d) => d.letter)) // descending frequency
+    const xScale = d3
+      .scaleBand()
+      .domain(
+        d3.groupSort(
+          data,
+          ([d]) => -d.frequency,
+          (d) => d.letter
+        )
+      ) // descending frequency
       .range([marginLeft, width - marginRight])
-      .padding(0.1);
+      .padding(0.05);
 
     // Declare the y (vertical position) scale.
-    const y = d3.scaleLinear()
+    const yScale = d3
+      .scaleLinear()
       .domain([0, d3.max(data, (d) => d.frequency)])
       .range([height - marginBottom, marginTop]);
 
     // Create the SVG container.
-    const svg = d3.select(svgRef.current)
+    const svg = d3
+      .select(svgRef.current)
       .attr("width", width)
       .attr("height", height)
       .attr("viewBox", [0, 0, width, height])
       .attr("style", "max-width: 100%; height: auto;");
 
-
     // Add a rect for each bar.
-    svg.append("g")
+    svg
+      .append("g")
       .attr("fill", "steelblue")
       .selectAll()
       .data(data)
       .join("rect")
-      .attr("x", (d) => x(d.letter))
-      .attr("y", (d) => y(d.frequency))
-      .attr("height", (d) => y(0) - y(d.frequency))
-      .attr("width", x.bandwidth());
+      .attr("x", (d) => xScale(d.letter))
+      .attr("y", (d) => yScale(d.frequency))
+      .attr("height", (d) => yScale(0) - yScale(d.frequency))
+      .attr("width", xScale.bandwidth())
+      .on("mouseover", (e) => {
+        d3.select(e.target)
+          .transition()
+          .duration("50")
+          .attr("fill", "green")
+          .attr("stroke", "white")
+          .attr("stroke-width", "2");
+      })
+      .on("mouseout", (e) => {
+        d3.select(e.target)
+          .transition()
+          .duration("50")
+          .attr("fill", "steelblue")
+          .attr("stroke", "none");
+      });
 
     // Add the x-axis and label.
-    svg.append("g")
+    svg
+      .append("g")
       .attr("transform", `translate(0,${height - marginBottom})`)
-      .call(d3.axisBottom(x).tickSizeOuter(0));
+      .call(d3.axisBottom(xScale).tickSizeOuter(0));
 
     // Add the y-axis and label, and remove the domain line.
-    svg.append("g")
+    svg
+      .append("g")
       .attr("transform", `translate(${marginLeft},0)`)
-      .call(d3.axisLeft(y).tickFormat((y) => (y).toFixed()))
-      .call(g => g.select(".domain").remove())
-      .call(g => g.append("text")
-        .attr("x", -marginLeft)
-        .attr("y", 10)
-        .attr("fill", "currentColor")
-        .attr("text-anchor", "start")
-        .text("↑ Frequency (%)"));
-
+      .call(d3.axisLeft(yScale).tickFormat((y) => y.toFixed()))
+      .call((g) => g.select(".domain").remove())
+      .call((g) =>
+        g
+          .append("text")
+          .attr("x", -marginLeft)
+          .attr("y", 10)
+          .attr("fill", "currentColor")
+          .attr("text-anchor", "start")
+          .text("↑ Frequency (%)")
+      );
   }, [data]);
 
   return <svg ref={svgRef}></svg>;
