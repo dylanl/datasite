@@ -69,19 +69,15 @@ export function BarGraph() {
       .attr("width", xScale.bandwidth())
       .on("mouseover", (e) => {
         d3.select(e.target)
-          .transition()
-          .duration("50")
-          .attr("fill", "green")
-          .attr("stroke", "white")
+          .attr("fill", "#819cd1")
+          .attr("stroke", "#819cd1")
           .attr("stroke-width", "2");
       })
       .on("mouseout", (e) => {
         d3.select(e.target)
-          .transition()
-          .duration("50")
           .attr("fill", "steelblue")
           .attr("stroke", "none");
-      });
+      });  
 
     // Add the x-axis and label.
     svg
