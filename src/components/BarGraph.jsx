@@ -20,7 +20,7 @@ export function BarGraph() {
     });
   }, []);
 
-  //we need to make this responsive.
+  //Beginning of SVG graph
   useEffect(() => {
     const width = 928;
     const height = 500;
@@ -56,28 +56,47 @@ export function BarGraph() {
       .attr("viewBox", [0, 0, width, height])
       .attr("style", "max-width: 100%; height: auto;");
 
+    //Popup tooltip data
+    const tooltip = d3
+      .select("body")
+      .append("div")
+      .style("position", "absolute")
+      .style("z-index", "10")
+      .style("background", "#000")
+      .style("display", "none")
+
     // Add a rect for each bar.
     svg
       .append("g")
       .attr("fill", "steelblue")
       .selectAll()
       .data(data)
+      .style("width", function (f) {
+        return xScale(f) + "px";
+      })
+      .text(function (f) {
+        return f;
+      })
       .join("rect")
       .attr("x", (d) => xScale(d.letter))
       .attr("y", (d) => yScale(d.frequency))
       .attr("height", (d) => yScale(0) - yScale(d.frequency))
       .attr("width", xScale.bandwidth())
-      .on("mouseover", (e) => {
+      .on("mouseover", (e, d) => {
         d3.select(e.target)
           .attr("fill", "#819cd1")
           .attr("stroke", "#819cd1")
           .attr("stroke-width", "2");
+        tooltip
+          .text(d.letter) //enter tooltip data here
+          .style("display", "block")
+          .style("left", e.pageX + 25 + "px")
+          .style("top", e.pageY + "px")
+          .style("padding", "5px");
       })
       .on("mouseout", (e) => {
-        d3.select(e.target)
-          .attr("fill", "steelblue")
-          .attr("stroke", "none");
-      });  
+        d3.select(e.target).attr("fill", "steelblue").attr("stroke", "none");
+      });
 
     // Add the x-axis and label.
     svg
@@ -100,6 +119,8 @@ export function BarGraph() {
           .attr("text-anchor", "start")
           .text("↑ Frequency (%)")
       );
+
+    d3.select("body").selectAll("div").data;
   }, [data]);
 
   return <svg ref={svgRef}></svg>;
