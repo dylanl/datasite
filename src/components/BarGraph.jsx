@@ -71,12 +71,6 @@ export function BarGraph() {
       .attr("fill", "steelblue")
       .selectAll()
       .data(data)
-      .style("width", function (f) {
-        return xScale(f) + "px";
-      })
-      .text(function (f) {
-        return f;
-      })
       .join("rect")
       .attr("x", (d) => xScale(d.letter))
       .attr("y", (d) => yScale(d.frequency))
