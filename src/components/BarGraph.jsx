@@ -11,6 +11,7 @@ export async function getGraphData() {
 }
 export function BarGraph() {
   let [data, setData] = useState([]);
+
   const svgRef = useRef();
 
   //makes sure that only one call is made to refresh the graph
@@ -60,10 +61,15 @@ export function BarGraph() {
     const tooltip = d3
       .select("body")
       .append("div")
+      .attr("data-locked", "unlocked")
       .style("position", "absolute")
       .style("z-index", "10")
-      .style("background", "#000")
+      .style("background", "lightblue")
       .style("display", "none")
+      .style("padding-left", "1ch")
+      .style("padding-right", "1ch")
+      .style("border-radius", "0.5em 0.5em 0.5em 0")
+      .style("color", "black");
 
     // Add a rect for each bar.
     svg
@@ -76,20 +82,38 @@ export function BarGraph() {
       .attr("y", (d) => yScale(d.frequency))
       .attr("height", (d) => yScale(0) - yScale(d.frequency))
       .attr("width", xScale.bandwidth())
-      .on("mouseover", (e, d) => {
+      .on("click", function (e) {
+        tooltip.attr(
+          "data-locked",
+          tooltip.attr("data-locked") === "unlocked" ? "locked" : "unlocked"
+        );
+      })
+      .on("mouseover", function (e, d) {
         d3.select(e.target)
           .attr("fill", "#819cd1")
           .attr("stroke", "#819cd1")
           .attr("stroke-width", "2");
-        tooltip
-          .text(d.letter) //enter tooltip data here
-          .style("display", "block")
-          .style("left", e.pageX + 25 + "px")
-          .style("top", e.pageY + "px")
-          .style("padding", "5px");
+        if (tooltip.attr("data-locked") === "unlocked") {
+          tooltip
+            .text(d.letter) //enter tooltip data here
+            .style("display", "block")
+            .style(
+              "left",
+              xScale(d.letter) +
+                xScale.bandwidth() +
+                svg.node().getBoundingClientRect().left +
+                "px"
+            )
+            .style("top", yScale(d.frequency) + "px")
+            .style("width", `${xScale.bandwidth()}px`)
+            .style("text-align", "left");
+        }
       })
       .on("mouseout", (e) => {
         d3.select(e.target).attr("fill", "steelblue").attr("stroke", "none");
+        if (tooltip.attr("data-locked") === "unlocked") {
+          tooltip.style("display", "none");
+        }
       });
 
     // Add the x-axis and label.
