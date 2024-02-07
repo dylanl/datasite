@@ -3,10 +3,13 @@ import * as d3 from "d3";
 import { useRef, useState, useEffect } from "react";
 
 export async function getGraphData() {
-  const csvData = await d3.csv("/Alphabets.csv", (row) => ({
-    letter: row.letter,
-    frequency: parseInt(row.frequency),
-  }));
+  const csvData = await d3.json(
+    "https://data.cdc.gov/resource/ycxr-emue.json",
+    (row) => ({
+      letter: row.letter,
+      frequency: parseInt(row.frequency),
+    })
+  );
   return csvData ?? [];
 }
 export function LineGraph() {
