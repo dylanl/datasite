@@ -1,23 +1,29 @@
 "use client";
 import * as d3 from "d3";
 import { useRef, useState, useEffect } from "react";
+import getCsvData from "@/actions/readCsv";
 
-export async function getGraphData() {
-  const csvData = await d3.csv("/Alphabets.csv", (row) => ({
-    letter: row.letter,
-    frequency: parseInt(row.frequency),
-  }));
-  return csvData ?? [];
-}
 export function BarGraph() {
   let [data, setData] = useState([]);
 
+  let tooltipStateRef = useRef({
+    locked: false,
+    data: "",
+  });
+
+  const tooltipRef = useRef();
   const svgRef = useRef();
 
   //makes sure that only one call is made to refresh the graph
   useEffect(() => {
-    getGraphData().then((graphData) => {
-      setData(graphData);
+    //get data by reading csv
+    getCsvData().then((data) => {
+      setData(
+        d3.csvParse(data, (row) => ({
+          letter: row.letter,
+          frequency: parseInt(row.frequency),
+        })),
+      );
     });
   }, []);
 
@@ -37,8 +43,8 @@ export function BarGraph() {
         d3.groupSort(
           data,
           ([d]) => -d.frequency,
-          (d) => d.letter
-        )
+          (d) => d.letter,
+        ),
       ) // descending frequency
       .range([marginLeft, width - marginRight])
       .padding(0.05);
@@ -59,13 +65,11 @@ export function BarGraph() {
 
     //Popup tooltip data
     const tooltip = d3
-      .select("body")
-      .append("div")
-      .attr("data-locked", "unlocked")
+      .select(tooltipRef.current)
       .style("position", "absolute")
       .style("z-index", "10")
       .style("background", "lightblue")
-      .style("display", "none")
+      .style("opacity", 0)
       .style("padding-left", "1ch")
       .style("padding-right", "1ch")
       .style("border-radius", "0.5em 0.5em 0.5em 0")
@@ -82,27 +86,30 @@ export function BarGraph() {
       .attr("y", (d) => yScale(d.frequency))
       .attr("height", (d) => yScale(0) - yScale(d.frequency))
       .attr("width", xScale.bandwidth())
-      .on("click", function (e) {
-        tooltip.attr(
-          "data-locked",
-          tooltip.attr("data-locked") === "unlocked" ? "locked" : "unlocked"
-        );
+      .on("click", function (_e, d) {
+        if (!tooltipStateRef.current.locked) {
+          tooltipStateRef.current = { locked: true, data: d.letter };
+        } else if (d.letter === tooltipStateRef.current.data) {
+          tooltipStateRef.current = { locked: false, data: "" };
+        }
       })
       .on("mouseover", function (e, d) {
         d3.select(e.target)
           .attr("fill", "#819cd1")
           .attr("stroke", "#819cd1")
           .attr("stroke-width", "2");
-        if (tooltip.attr("data-locked") === "unlocked") {
+        if (!tooltipStateRef.current.locked) {
           tooltip
             .text(d.letter) //enter tooltip data here
-            .style("display", "block")
+            .transition()
+            .duration(50)
+            .style("opacity", 0.9)
             .style(
               "left",
               xScale(d.letter) +
                 xScale.bandwidth() +
                 svg.node().getBoundingClientRect().left +
-                "px"
+                "px",
             )
             .style("top", yScale(d.frequency) + "px")
             .style("width", `${xScale.bandwidth()}px`)
@@ -111,8 +118,8 @@ export function BarGraph() {
       })
       .on("mouseout", (e) => {
         d3.select(e.target).attr("fill", "steelblue").attr("stroke", "none");
-        if (tooltip.attr("data-locked") === "unlocked") {
-          tooltip.style("display", "none");
+        if (!tooltipStateRef.current.locked) {
+          tooltip.style("opacity", 0);
         }
       });
 
@@ -135,11 +142,14 @@ export function BarGraph() {
           .attr("y", 10)
           .attr("fill", "currentColor")
           .attr("text-anchor", "start")
-          .text("↑ Frequency (%)")
+          .text("↑ Frequency (%)"),
       );
-
-    d3.select("body").selectAll("div").data;
   }, [data]);
 
-  return <svg ref={svgRef}></svg>;
+  return (
+    <>
+      <div className="tooltip" ref={tooltipRef}></div>
+      <svg className="bargraph" ref={svgRef}></svg>
+    </>
+  );
 }
